@@ -19,11 +19,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - uses: SonarSource/sonarqube-scan-action@master
+      - uses: SonarSource/sonarqube-scan-action@v4.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN2 }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST }}
-      - uses: SonarSource/sonarqube-quality-gate-action@master
+      - uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN2 }}
