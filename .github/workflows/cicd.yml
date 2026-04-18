@@ -20,7 +20,8 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - uses: SonarSource/sonarqube-scan-action@v4.2.1
+      # Se bajó la versión de v4 a v3 para mayor compatibilidad con la API del servidor
+      - uses: SonarSource/sonarqube-scan-action@v3.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN2 }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST }}
@@ -52,6 +53,8 @@ jobs:
         with:
           context: .
           push: true
+          # Forzamos el tag a minúsculas mediante la variable del paso anterior si fuera necesario, 
+          # pero aquí usamos ms-asesorias directamente para asegurar éxito.
           tags: ghcr.io/${{ github.repository_owner }}/ms-asesorias:main
 
   # 3. Prueba de Rendimiento
@@ -70,7 +73,6 @@ jobs:
         run: |
           curl https://github.com/grafana/k6/releases/download/v0.49.0/k6-v0.49.0-linux-amd64.tar.gz -L | tar xvz
           sudo mv k6-v0.49.0-linux-amd64/k6 /usr/local/bin/k6
-          # Ejecutar la app en segundo plano y correr el test
           npm start &
           sleep 15
           k6 run script-rendimiento.js || echo "K6 falló pero continuamos"
@@ -91,9 +93,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: REPO_LOWER
-        env:
-          REPO_LOWER: ${{ steps.repo_name.outputs.repo }}
+          # El script DEBE ir dentro de 'with'
           script: |
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
@@ -107,7 +107,8 @@ jobs:
 
             echo "Desplegando entorno $TARGET_COLOR en puerto $TARGET_PORT..."
 
-            docker pull ghcr.io/$REPO_LOWER:main
+            # Usamos la salida del paso repo_name para el nombre de la imagen
+            docker pull ghcr.io/${{ steps.repo_name.outputs.repo }}:main
             docker stop my-app-$TARGET_COLOR || true
             docker rm my-app-$TARGET_COLOR || true
             
@@ -115,7 +116,7 @@ jobs:
               --name my-app-$TARGET_COLOR \
               -p $TARGET_PORT:3000 \
               --restart always \
-              ghcr.io/$REPO_LOWER:main
+              ghcr.io/${{ steps.repo_name.outputs.repo }}:main
 
             printf "server {
                 listen 80;
